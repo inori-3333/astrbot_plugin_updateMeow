@@ -1,6 +1,6 @@
-name: helloworld # 这是你的插件的唯一识别名。
-desc: 这是 AstrBot 的默认插件，支持关键词回复。 # 插件简短描述
-help: 输入 /keyword 查看关键词回复帮助。 # 插件的帮助信息
-version: v1.3 # 插件版本号。格式：v1.1.1 或者 v1.1
-author: Soulter # 作者
-repo: https://github.com/Soulter/helloworld # 插件的仓库地址
+name: updateMeow # 这是你的插件的唯一识别名。
+desc: 将已安装插件的更新内容推送到指定的会话 # 插件简短描述
+help: 待推送的插件更新内容需要建立版本更新文档，具体要求见仓库readme # 插件的帮助信息
+version: v1.0 # 插件版本号。格式：v1.1.1 或者 v1.1
+author: inori-3333 # 作者
+repo: https://github.com/inori-3333/astrbot_plugin_updateMeow # 插件的仓库地址
