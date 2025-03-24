@@ -1,0 +1,7 @@
+# 插件配置
+# 接收更新消息的会话ID列表
+target_conversations:
+  - "your_conversation_id_here"
+
+# 文件编码设置
+encoding: "utf-8" 

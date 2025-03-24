@@ -1,0 +1,14 @@
+{
+    "target_conversations": {
+        "description": "接收更新消息的会话ID列表",
+        "type": "list",
+        "hint": "填写需要接收更新消息的会话ID，如: [123456, 789012]",
+        "default": []
+    },
+    "encoding": {
+        "description": "读取文件时使用的编码格式",
+        "type": "string",
+        "hint": "设置文件读取的编码格式，如: utf-8",
+        "default": "utf-8"
+    }
+} 

@@ -1,28 +1,30 @@
 import os
 import re
+import yaml
+import json
 from pathlib import Path
 from astrbot.api.event import filter, AstrMessageEvent, MessageEventResult
 from astrbot.api.star import Context, Star, register
 from astrbot.api import logger
 from astrbot.api.all import *
-from astrbot.api.message_components import Plain, MessageChain
+from astrbot.api.message_components import Plain
+from astrbot.core.star.star_handler import EventType, star_handlers_registry
 
 @register("updateMeow", "inori-3333", "将已安装插件的更新内容推送到指定的会话", "1.0.0")
 class MyPlugin(Star):
-    def __init__(self, context: Context):
+    def __init__(self, context: Context, config: dict):
         super().__init__(context)
-        # 设置接收更新消息的会话ID，可以根据需要修改
-        self.target_conversation_id = "your_conversation_id_here"
+        self.config = config
+        self.target_conversations = config.get("target_conversations", [])
+        self.encoding = config.get("encoding", "utf-8")
         
         # 确保check.txt文件存在
         self.check_file_path = os.path.join(os.path.dirname(__file__), "check.txt")
         if not os.path.exists(self.check_file_path):
-            with open(self.check_file_path, "w", encoding="utf-8") as f:
+            with open(self.check_file_path, "w", encoding=self.encoding) as f:
                 f.write("# 插件版本记录\n")
-        
-        # 注册启动事件
-        self.context.register_start_event(self.on_start)
     
+    @filter.on_astrbot_loaded()
     async def on_start(self):
         '''Bot启动时检查插件更新并推送'''
         await self.check_updates()
@@ -35,7 +37,7 @@ class MyPlugin(Star):
         # 读取当前的版本记录
         check_data = {}
         if os.path.exists(self.check_file_path):
-            with open(self.check_file_path, "r", encoding="utf-8") as f:
+            with open(self.check_file_path, "r", encoding=self.encoding) as f:
                 lines = f.readlines()
                 current_plugin = None
                 for line in lines:
@@ -54,7 +56,7 @@ class MyPlugin(Star):
                 
                 if os.path.exists(versions_file):
                     # 读取versions.txt
-                    with open(versions_file, "r", encoding="utf-8") as f:
+                    with open(versions_file, "r", encoding=self.encoding) as f:
                         content = f.read()
                     
                     # 查找最后一个版本号
@@ -79,15 +81,17 @@ class MyPlugin(Star):
                             # 更新check.txt
                             self._update_check_file(plugin_dir, latest_version)
         
-        # 如果有更新，发送消息
+        # 如果有更新，发送消息到所有配置的会话
         if update_messages:
             message = "# 🎉 插件更新通知 🎉\n\n" + "\n\n".join(update_messages)
-            await self.context.send_message(self.target_conversation_id, MessageChain([Plain(message)]))
+            for conversation_id in self.target_conversations:
+                if conversation_id:
+                    await self.context.send_message(conversation_id, [Plain(message)])
     
     def _update_check_file(self, plugin_name, version):
         '''更新check.txt中的版本记录'''
         if os.path.exists(self.check_file_path):
-            with open(self.check_file_path, "r", encoding="utf-8") as f:
+            with open(self.check_file_path, "r", encoding=self.encoding) as f:
                 lines = f.readlines()
             
             # 查找插件部分
@@ -116,11 +120,11 @@ class MyPlugin(Star):
                 new_lines.append(f"\n## {plugin_name}\nversion=={version}\n")
             
             # 写回文件
-            with open(self.check_file_path, "w", encoding="utf-8") as f:
+            with open(self.check_file_path, "w", encoding=self.encoding) as f:
                 f.writelines(new_lines)
         else:
             # 如果文件不存在，创建一个新的
-            with open(self.check_file_path, "w", encoding="utf-8") as f:
+            with open(self.check_file_path, "w", encoding=self.encoding) as f:
                 f.write(f"# 插件版本记录\n\n## {plugin_name}\nversion=={version}\n")
     
     @filter.command("checkupdates")
@@ -129,6 +133,25 @@ class MyPlugin(Star):
         yield event.plain_result("正在检查插件更新...")
         await self.check_updates()
         yield event.plain_result("插件更新检查完成!")
+
+    @filter.command("setconversation")
+    async def set_conversation_command(self, event: AstrMessageEvent):
+        '''设置接收更新消息的会话ID'''
+        if not event.plain_text.startswith("/setconversation "):
+            return
+        
+        conversation_id = event.plain_text.replace("/setconversation ", "").strip()
+        if conversation_id:
+            if conversation_id not in self.target_conversations:
+                self.target_conversations.append(conversation_id)
+                self.config["target_conversations"] = self.target_conversations
+                with open(os.path.join(os.path.dirname(__file__), "config.yaml"), "w", encoding="utf-8") as f:
+                    yaml.dump(self.config, f, allow_unicode=True)
+                yield event.plain_result(f"已添加会话ID: {conversation_id}")
+            else:
+                yield event.plain_result("该会话ID已存在")
+        else:
+            yield event.plain_result("请提供有效的会话ID")
 
 
 # TODO：
